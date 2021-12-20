@@ -26,7 +26,7 @@ class Contributor(models.Model):
         AUTHOR = 'AUTH'
         CONTRIBUTOR = 'CONTRI'
     type = models.fields.CharField(
-        choices=Permission_contributor.choices, max_length=5)
+        choices=Permission_contributor.choices, max_length=20)
     role = models.CharField(max_length=128, verbose_name="Contributor Role")
 
 
@@ -38,7 +38,7 @@ class Issue(models.Model):
         BUG = 'BUG'
         IMPROVEMENT = 'IMPVMT'
         TASK = 'TASK'
-    tag = models.fields.CharField(choices=Tag_issue.choices, max_length=6)
+    tag = models.fields.CharField(choices=Tag_issue.choices, max_length=15)
 
     class Priority_issue(models.TextChoices):
         HIGH = 'P2'
@@ -54,9 +54,9 @@ class Issue(models.Model):
     status = models.fields.CharField(
         choices=Status_issue.choices, max_length=6)
     author_user_id = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Author User Id")
+        to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Author User Id", related_name="Author_User_Id")
     assignee_user_id = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Assignee User Id")
+        to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Assignee User Id", related_name="Assignee_User_Id")
     created_time = models.DateTimeField(
         default=timezone.now)
 

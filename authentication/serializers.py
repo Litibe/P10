@@ -1,18 +1,33 @@
-from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import ModelSerializer, ValidationError, EmailField, CharField
+from rest_framework.validators import UniqueValidator
+from django.contrib.auth.password_validation import validate_password
 
 from authentication.models import User
 
 
 class UserSerializer(ModelSerializer):
+    email = EmailField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
+    password = CharField(write_only=True, required=True,
+                         validators=[validate_password])
+
     class Meta:
         model = User
-        fields = ['id', 'last_name', 'first_name', 'email', 'password']
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ('email', 'password',
+                  'first_name', 'last_name')
+        extra_kwargs = {
+            'first_name': {'required': True},
+            'last_name': {'required': True}
+        }
 
-    def save(self, data):
-        print(data)
-        new_user = User(first_name=data.get("first_name"), last_name=data.get(
-            "last_name"), email=data.get("email"))
-        new_user.set_password(data.get('password'))
-        new_user.save()
-        return new_user
+    def create(self, validated_data):
+        user = User.objects.create(
+            email=validated_data['email'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name']
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user

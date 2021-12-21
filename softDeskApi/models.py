@@ -4,53 +4,52 @@ from django.utils import timezone
 
 
 class Project(models.Model):
-    title = models.CharField(max_length=128, verbose_name="Project Title")
-    description = models.TextField(max_length=2048, verbose_name="Description")
-
     class Type_project(models.TextChoices):
         BACK_END = 'BE'
         FRONT_END = 'FE'
         IOS = 'IOS'
         ANDROID = 'AID'
+
+    title = models.CharField(max_length=128, verbose_name="Project Title")
+    description = models.TextField(max_length=2048, verbose_name="Description")
     type = models.fields.CharField(choices=Type_project.choices, max_length=5)
     author_user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
 
 class Contributor(models.Model):
-    user = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-
     class Permission_contributor(models.TextChoices):
         AUTHOR = 'AUTH'
         CONTRIBUTOR = 'CONTRI'
+
+    user = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     type = models.fields.CharField(
         choices=Permission_contributor.choices, max_length=20)
     role = models.CharField(max_length=128, verbose_name="Contributor Role")
 
 
 class Issue(models.Model):
-    title = models.CharField(max_length=128, verbose_name="Project Title")
-    description = models.TextField(max_length=2048, verbose_name="Description")
-
     class Tag_issue(models.TextChoices):
         BUG = 'BUG'
         IMPROVEMENT = 'IMPVMT'
         TASK = 'TASK'
-    tag = models.fields.CharField(choices=Tag_issue.choices, max_length=15)
 
     class Priority_issue(models.TextChoices):
         HIGH = 'P2'
         MEDIUM = 'P1'
         LOW = 'P0'
-    priority = models.fields.CharField(
-        choices=Priority_issue.choices, max_length=6)
 
     class Status_issue(models.TextChoices):
         TO_DO = 'S2'
         IN_PROGRESS = 'S1'
         TERMINATED = 'S0'
+    title = models.CharField(max_length=128, verbose_name="Project Title")
+    description = models.TextField(max_length=2048, verbose_name="Description")
+    tag = models.fields.CharField(choices=Tag_issue.choices, max_length=15)
+    priority = models.fields.CharField(
+        choices=Priority_issue.choices, max_length=6)
     status = models.fields.CharField(
         choices=Status_issue.choices, max_length=6)
     author_user = models.ForeignKey(

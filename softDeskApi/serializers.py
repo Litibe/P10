@@ -1,6 +1,6 @@
 from rest_framework.serializers import ModelSerializer
 
-from models import Comment, Contributor, Issue, Project
+from softDeskApi.models import Comment, Contributor, Issue, Project
 
 
 class CommentSerializer(ModelSerializer):
@@ -12,4 +12,16 @@ class CommentSerializer(ModelSerializer):
 class ContributorSerializer(ModelSerializer):
 
     class Meta:
-        model = Comment
+        model = Contributor
+
+
+class IssueSerializer(ModelSerializer):
+
+    class Meta:
+        model = Issue
+
+
+class ProjectSerializer(ModelSerializer):
+
+    class Meta:
+        model = Project

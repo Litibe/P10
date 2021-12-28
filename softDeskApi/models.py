@@ -13,8 +13,8 @@ class Project(models.Model):
     title = models.CharField(max_length=128, verbose_name="Project Title")
     description = models.TextField(max_length=2048, verbose_name="Description")
     type = models.CharField(choices=Type_project.choices, max_length=15)
-    author_user = models.ForeignKey(
-        to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    contributor = models.ManyToManyField(to=settings.AUTH_USER_MODEL, through='Contributor',
+                                         related_name='contributions')
 
 
 class Contributor(models.Model):
@@ -24,7 +24,8 @@ class Contributor(models.Model):
 
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    project = models.ForeignKey(
+        to=Project, on_delete=models.CASCADE, related_name='contributor_project')
     role = models.CharField(
         choices=Permission_contributor.choices, max_length=20, verbose_name="Contributor Role")
 
@@ -50,7 +51,7 @@ class Issue(models.Model):
     priority = models.CharField(
         choices=Priority_issue.choices, max_length=15)
     projet = models.ForeignKey(
-        Project, on_delete=models.CASCADE, verbose_name="Project Id", related_name="Project")
+        to=Project, on_delete=models.CASCADE, verbose_name="Project Id", related_name="Project")
     status = models.CharField(
         choices=Status_issue.choices, max_length=15)
     author_user = models.ForeignKey(
@@ -66,6 +67,6 @@ class Comment(models.Model):
     author_user_id = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Author User Id")
     issue_id = models.ForeignKey(
-        Issue, on_delete=models.CASCADE, verbose_name="Issue Id")
+        to=Issue, on_delete=models.CASCADE, verbose_name="Issue Id")
     created_time = models.DateTimeField(
         default=timezone.now)

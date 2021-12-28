@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework import generics, permissions, response, status
 from rest_framework.viewsets import ModelViewSet, ViewSet
@@ -6,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-
+from authentication.models import User
 from softDeskApi.models import Comment, Contributor, Issue, Project
 from authentication.serializers import UserSerializer
 from softDeskApi.serializers import CommentSerializer, ContributorSerializer, IssueSerializer, ProjectSerializer, ProjectSerializerDetails
@@ -28,7 +29,7 @@ class ProjectListView(ViewSet):
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data)
 
-    def create(self, request, format=None):
+    def create(self, request):
         """
         POST Method
         Return : 
@@ -37,9 +38,14 @@ class ProjectListView(ViewSet):
         serializer_project = ProjectSerializer(
             data=request.data)
         if serializer_project.is_valid():
-            serializer_project.create(self, request.data, request.user.id)
-            return Response(serializer_project.data, status=status.HTTP_201_CREATED)
-        return Response(serializer_project.data)
+            project_created = serializer_project.create(request.data)
+            contributor = Contributor.objects.create(
+                user=request.user, project=Project.objects.filter(id=project_created.id).first(), role="AUTHOR")
+            contributor.save()
+            projects = Project.objects.filter(id=project_created.id)
+            serializer = ProjectSerializer(projects, many=True)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response("ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
 
     def retrieve(self, request, pk):
         """
@@ -72,5 +78,7 @@ class ProjectListView(ViewSet):
         serializer = ProjectSerializerDetails(
             data=request.data)
         if serializer.is_valid():
-            serializer.delete(serializer.data, pk)
-        return Response(serializer.data)
+            project = get_object_or_404(Project, id=pk)
+            project.delete()
+            return Response("SUCCESSFULLY", status=status.HTTP_202_ACCEPTED)
+        return Response("ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)

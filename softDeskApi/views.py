@@ -6,7 +6,7 @@ from rest_framework.viewsets import ModelViewSet, ViewSet
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-
+from rest_framework.decorators import action
 from authentication.models import User
 from softDeskApi.models import Comment, Contributor, Issue, Project
 from authentication.serializers import UserSerializer
@@ -82,3 +82,14 @@ class ProjectListView(ViewSet):
             project.delete()
             return Response("SUCCESSFULLY", status=status.HTTP_202_ACCEPTED)
         return Response("ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
+
+    @action(detail=True, methods=['get'])
+    def users(self, request, pk=None):
+        """
+        GET Method for users details into project
+        Return : 
+            - list of users into project
+        """
+        contributors = Contributor.objects.filter(project_id=pk)
+        serializer = ContributorSerializer(contributors, many=True)
+        return Response(serializer.data)

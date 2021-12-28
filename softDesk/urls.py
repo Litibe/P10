@@ -3,17 +3,16 @@ from django.urls import path, include
 from rest_framework import routers
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from softDeskApi.views import ProjectAllView, UserSignUpView
+from authentication.urls import router as authentication_router
+from softDeskApi.urls import router as softDeskApi_router
 
-router = routers.SimpleRouter()
-router.register('project', ProjectAllView, basename="project")
+router = routers.DefaultRouter()
+router.registry.extend(authentication_router.registry)
+router.registry.extend(softDeskApi_router.registry)
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api-auth/', include('rest_framework.urls')),
-    path('api/', include(router.urls)),
-    path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/signup/', UserSignUpView.as_view()),
+    path('', include(router.urls)),
+    path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('login/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

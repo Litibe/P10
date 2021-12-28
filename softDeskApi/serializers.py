@@ -33,17 +33,33 @@ class ProjectSerializer(ModelSerializer):
         model = Project
         fields = ['id', 'title', 'description', 'type', 'author_user_id']
 
-        extra_kwargs = {
-            'title': {'required': True},
-            'description': {'required': True},
-            'type': {'required': True},
-        }
-
     def create(self, validated_data):
         project = Project.objects.create(title=validated_data['title'],
                                          description=validated_data['description'],
                                          type=validated_data['type'],
-                                         author_user_id=self.context['request'].user.id,
+                                         author_user_id=self.context.get(
+                                             "request").user.id,
                                          )
         project.save()
         return project
+
+
+class ProjectSerializerDetails(ModelSerializer):
+    title = fields.CharField(required=True)
+    description = fields.CharField(required=True)
+    type = fields.ChoiceField(choices=Project.Type_project.choices)
+
+    class Meta:
+        model = Project
+        fields = ['id', 'title', 'description', 'type', 'author_user_id']
+
+    def put(self, validated_data, pk):
+        project = Project.objects.filter(id=pk)
+        project.update(
+            title=validated_data['title'], description=validated_data['description'], type=validated_data['type'])
+        return project
+
+    def delete(self, validated_data, pk):
+        project = Project.objects.filter(id=pk)
+        project.delete()
+        return True

@@ -186,7 +186,8 @@ class ProjectListView(ViewSet):
                 if serializer_issue_create.is_valid():
                     issue_created = serializer_issue.create(
                         request.data, projects, author=request.user)
-                    issue = Project.objects.filter(id=issue_created.id)
+                    issue = Issue.objects.filter(id=issue_created.id)
                     serializer = IssueSerializer(issue, many=True)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
         return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)

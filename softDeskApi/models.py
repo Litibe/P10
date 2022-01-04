@@ -50,7 +50,7 @@ class Issue(models.Model):
     tag = models.CharField(choices=Tag_issue.choices, max_length=15)
     priority = models.CharField(
         choices=Priority_issue.choices, max_length=15)
-    projet = models.ForeignKey(
+    project = models.ForeignKey(
         to=Project, on_delete=models.CASCADE, verbose_name="Project Id", related_name="Project")
     status = models.CharField(
         choices=Status_issue.choices, max_length=15)

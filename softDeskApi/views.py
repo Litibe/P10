@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from authentication.models import User
 from softDeskApi.models import Comment, Contributor, Issue, Project
 from authentication.serializers import UserSerializer
-from softDeskApi.serializers import CommentSerializer, ContributorSerializer, IssueSerializer, ProjectSerializerCreate, ProjectSerializer, ProjectSerializerDetails
+from softDeskApi.serializers import CommentSerializer, ContributorSerializer, IssueSerializerCreate, IssueSerializer, ProjectSerializerCreate, ProjectSerializer, ProjectSerializerDetails
 
 
 class ProjectListView(ViewSet):
@@ -94,7 +94,7 @@ class ProjectListView(ViewSet):
             return Response("SUCCESSFULLY", status=status.HTTP_202_ACCEPTED)
         return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get', 'post', "delete"])
     def users(self, request, pk=None):
         """
         GET Method for users details into project
@@ -104,27 +104,16 @@ class ProjectListView(ViewSet):
         project = get_object_or_404(
             Project, id=pk)
         projects = Project.objects.filter(contributor=request.user.id, id=pk)
-        if projects.exists():
-            contributors = Contributor.objects.filter(
-                project_id=pk)
-            serializer = ContributorSerializer(contributors, many=True)
-            return Response(serializer.data)
-        return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
-
-    @action(detail=True, methods=['post'])
-    def users(self, request, pk=None):
-        """
-        POST Method to add Contributor into project
-        Return :
-            - list of users into project
-        """
-        project = get_object_or_404(
-            Project, id=pk)
-        projects = Project.objects.filter(contributor=request.user.id, id=pk)
-
-        if projects.exists():
-            new_contributor = User.objects.filter(
-                email=request.data.get('email', '')).first()
+        if request.method == "GET":
+            if projects.exists():
+                contributors = Contributor.objects.filter(
+                    project_id=pk)
+                serializer = ContributorSerializer(contributors, many=True)
+                return Response(serializer.data)
+        if request.method == "POST":
+            if projects.exists():
+                new_contributor = User.objects.filter(
+                    email=request.data.get('email', '')).first()
             if not new_contributor:
                 return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
             contributor_not_in_projects = Project.objects.filter(
@@ -144,22 +133,10 @@ class ProjectListView(ViewSet):
                     serializer = ContributorSerializer(contributors, many=True)
                     return Response(serializer.data)
             return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
-        return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
-
-    @action(detail=True, methods=['delete'])
-    def users(self, request, pk=None):
-        """
-        DEL Method to del Contributor into project
-        Return :
-            - list of users into project
-        """
-        project = get_object_or_404(
-            Project, id=pk)
-        projects = Project.objects.filter(contributor=request.user.id, id=pk)
-
-        if projects.exists():
-            new_contributor = User.objects.filter(
-                email=request.data.get('email', '')).first()
+        if request.method == "DELETE":
+            if projects.exists():
+                new_contributor = User.objects.filter(
+                    email=request.data.get('email', '')).first()
             if not new_contributor:
                 return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
             contributor_in_projects = Project.objects.filter(
@@ -179,4 +156,37 @@ class ProjectListView(ViewSet):
                     serializer = ContributorSerializer(contributors, many=True)
                     return Response(serializer.data)
             return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
+        return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
+
+    @action(detail=True, methods=['get', 'post'])
+    def issues(self, request, pk=None):
+        """
+        GET Method for issues details into project
+        Return :
+            - list of issues into project
+        """
+        projects = get_object_or_404(
+            Project, id=pk)
+        projects = Project.objects.filter(
+            contributor=request.user.id, id=pk).first()
+        if request.method == "GET":
+            if projects:
+                issues = Issue.objects.filter(
+                    project=projects)
+                if not issues:
+                    return Response("Not Issues for this project", status=status.HTTP_204_NO_CONTENT)
+                else:
+                    serializer = IssueSerializer(issues, many=True)
+                    return Response(serializer.data)
+        if request.method == "POST":
+            if projects:
+                serializer_issue_create = IssueSerializerCreate(
+                    data=request.data)
+                serializer_issue = IssueSerializer(data=request.data)
+                if serializer_issue_create.is_valid():
+                    issue_created = serializer_issue.create(
+                        request.data, projects, author=request.user)
+                    issue = Project.objects.filter(id=issue_created.id)
+                    serializer = IssueSerializer(issue, many=True)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)

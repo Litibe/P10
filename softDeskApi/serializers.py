@@ -26,8 +26,7 @@ class IssueSerializer(ModelSerializer):
         model = Issue
 
 
-class ProjectSerializer(ModelSerializer):
-    contributor_project = ContributorSerializer(many=True)
+class ProjectSerializerCreate(ModelSerializer):
 
     title = fields.CharField(required=True)
     description = fields.CharField(required=True)
@@ -35,7 +34,7 @@ class ProjectSerializer(ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ['id', 'title', 'description', 'type', "contributor_project"]
+        fields = ['id', 'title', 'description', 'type']
 
     def create(self, validated_data):
         project = Project.objects.create(title=validated_data['title'],
@@ -43,6 +42,14 @@ class ProjectSerializer(ModelSerializer):
                                          type=validated_data['type'])
         project.save()
         return project
+
+
+class ProjectSerializer(ProjectSerializerCreate):
+    contributor_project = ContributorSerializer(many=True)
+
+    class Meta:
+        model = Project
+        fields = ['id', 'title', 'description', 'type', "contributor_project"]
 
 
 class ProjectSerializerDetails(ModelSerializer):

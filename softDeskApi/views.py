@@ -1,4 +1,6 @@
 from django.conf import settings
+from django.db import models
+from django.db.models.query_utils import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework import generics, permissions, response, status
@@ -10,7 +12,7 @@ from rest_framework.decorators import action
 from authentication.models import User
 from softDeskApi.models import Comment, Contributor, Issue, Project
 from authentication.serializers import UserSerializer
-from softDeskApi.serializers import CommentSerializer, ContributorSerializer, IssueSerializerCreate, IssueSerializer, ProjectSerializerCreate, ProjectSerializer, ProjectSerializerDetails
+from softDeskApi.serializers import CommentSerializer, ContributorSerializer, IssueSerializerCreate, IssueDetailsSerializer, IssueSerializer, ProjectSerializerCreate, ProjectSerializer, ProjectSerializerDetails
 
 
 class ProjectListView(ViewSet):
@@ -23,10 +25,10 @@ class ProjectListView(ViewSet):
         """
         GET Method
         Return :
-            - All projects created by user_logged
+            - A list where user_logged is an Author or a contributor of projects
         """
-
-        projects = Project.objects.filter(contributor=request.user.id)
+        projects = Project.objects.filter(
+            contributor=request.user.id)
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data)
 
@@ -41,11 +43,11 @@ class ProjectListView(ViewSet):
             data=request.data)
         if serializer_project.is_valid():
             project_created = serializer_project.create(request.data)
-            contributor = Contributor.objects.create(
+            author_project = Contributor.objects.create(
                 user=request.user, project=Project.objects.filter(id=project_created.id).first(), role="AUTHOR")
-            contributor.save()
-            projects = Project.objects.filter(id=project_created.id)
-            serializer = ProjectSerializerCreate(projects, many=True)
+            author_project.save()
+            projects = Project.objects.filter(id=project_created.id).first()
+            serializer = ProjectSerializerCreate(projects, many=False)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response("ERROR TO CREATE PROJECT", status=status.HTTP_406_NOT_ACCEPTABLE)
 
@@ -53,7 +55,7 @@ class ProjectListView(ViewSet):
         """
         GET Method for details project
         Return :
-            - details projects created by user_logged
+            - details projects where user_logged is in list contributor/author of project
         """
         project = get_object_or_404(Project, id=pk)
         projects = Project.objects.filter(contributor=request.user.id, id=pk)
@@ -66,128 +68,197 @@ class ProjectListView(ViewSet):
         """
         PUT Method for details project
         Return :
-            - updated projects
+            - updated projects only by this author
         """
 
         project = get_object_or_404(Project, id=pk)
-        projects = Project.objects.filter(contributor=request.user.id, id=pk)
-        if projects.exists():
+        author = Contributor.objects.filter(
+            project=pk, role="AUTHOR").first()
+        if author.user.id == request.user.id:
             serializer = ProjectSerializerDetails(
                 data=request.data)
             if serializer.is_valid():
                 serializer.put(serializer.data, pk)
                 return Response(serializer.data)
             return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
-        return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
+        return Response("YOU ARE NOT THE AUTHOR OF THIS PROJECT ! Update Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
 
     def destroy(self, request, pk):
         """
         DELETE Method for details project
         Return :
-            - delete projects created by user_logged
+            - delete projects created by this Author
         """
         project = get_object_or_404(
             Project, id=pk)
-        project = Project.objects.filter(contributor=request.user.id, id=pk)
-        if project.exists():
+        author = Contributor.objects.filter(
+            project=pk, role="AUTHOR").first()
+        if author.user.id == request.user.id:
             project.delete()
             return Response("SUCCESSFULLY", status=status.HTTP_202_ACCEPTED)
-        return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
+        return Response("YOU ARE NOT THE AUTHOR OF THIS PROJECT ! DELETE Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
 
-    @action(detail=True, methods=['get', 'post', "delete"])
-    def users(self, request, pk=None):
+
+class UserIntoProjectView(ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list_users_project(self, request, id_project=None):
         """
         GET Method for users details into project
         Return :
             - list of users into project
         """
         project = get_object_or_404(
-            Project, id=pk)
-        projects = Project.objects.filter(contributor=request.user.id, id=pk)
-        if request.method == "GET":
-            if projects.exists():
-                contributors = Contributor.objects.filter(
-                    project_id=pk)
-                serializer = ContributorSerializer(contributors, many=True)
-                return Response(serializer.data)
-        if request.method == "POST":
-            if projects.exists():
-                new_contributor = User.objects.filter(
-                    email=request.data.get('email', '')).first()
+            Project, id=id_project)
+        contributors_into_project = Contributor.objects.filter(
+            project_id=id_project, user=request.user.id)
+        if project and contributors_into_project:
+            contributors = Contributor.objects.filter(
+                project_id=id_project)
+            serializer = ContributorSerializer(contributors, many=True)
+            return Response(serializer.data)
+        return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT ! Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
+
+    def add_user_into_project(self, request, id_project=None):
+        """
+        POST Method for users details into project
+        Return :
+            - create a new contributor into project and return list of all users into project
+        """
+        project = get_object_or_404(
+            Project, id=id_project)
+        author = Contributor.objects.filter(
+            project=id_project, role="AUTHOR").first()
+        if author.user.id == request.user.id:
+            new_contributor = User.objects.filter(
+                email=request.data.get('email', '')).first()
             if not new_contributor:
                 return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
             contributor_not_in_projects = Project.objects.filter(
-                contributor=new_contributor.id, id=pk)
+                contributor=new_contributor.id, id=id_project)
             if contributor_not_in_projects:
                 return Response("User Already into current project", status=status.HTTP_409_CONFLICT)
 
             if new_contributor and not contributor_not_in_projects:
                 contributor = Contributor.objects.create(
-                    user=new_contributor, project=projects.first(), role="CONTRIBUTOR")
+                    user=new_contributor, project=project, role="CONTRIBUTOR")
                 contributor.save()
                 projects = Project.objects.filter(
-                    contributor=request.user.id, id=pk)
+                    contributor=request.user.id, id=id_project)
                 if projects.exists():
                     contributors = Contributor.objects.filter(
-                        project_id=pk)
+                        project_id=id_project)
                     serializer = ContributorSerializer(contributors, many=True)
                     return Response(serializer.data)
-            return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
-        if request.method == "DELETE":
-            if projects.exists():
-                new_contributor = User.objects.filter(
-                    email=request.data.get('email', '')).first()
-            if not new_contributor:
                 return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
-            contributor_in_projects = Project.objects.filter(
-                contributor=new_contributor.id, id=pk)
-            if not contributor_in_projects:
-                return Response("User isn't into current project", status=status.HTTP_409_CONFLICT)
+        return Response("YOU ARE NOT THE AUTHOR OF THIS PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
 
-            if new_contributor and contributor_in_projects:
-                contributor = Contributor.objects.filter(
-                    user=new_contributor, project=projects.first()).first()
+    def del_user(self, request, id_project, id_user):
+        """
+        DEL Method
+        Return :
+            - HTTP_202 to successful delete
+            - HTTP_404 if user_id not into contributor Project or not existing project
+        """
+
+        project = get_object_or_404(Project, id=id_project)
+        contributor = get_object_or_404(
+            Contributor, user=id_user, project=id_project, role="CONTRIBUTOR")
+        author = Contributor.objects.filter(
+            project=id_project, role="AUTHOR").first()
+        if author.user.id == request.user.id:
+            contributor = Contributor.objects.filter(
+                project=id_project, role="CONTRIBUTOR", user=id_user).first()
+            if contributor:
+                string_response = "SUCCESSFULLY Delete Contributor - " + "email : " + \
+                    str(contributor.user) + " with user_id #" + \
+                    str(contributor.user.id)
                 contributor.delete()
-                projects = Project.objects.filter(
-                    contributor=request.user.id, id=pk)
-                if projects.exists():
-                    contributors = Contributor.objects.filter(
-                        project_id=pk)
-                    serializer = ContributorSerializer(contributors, many=True)
-                    return Response(serializer.data)
-            return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
-        return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
+                return Response(string_response, status=status.HTTP_202_ACCEPTED)
+        else:
+            return Response("YOU ARE NOT THE AUTHOR OF THIS PROJECT ! Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
 
-    @action(detail=True, methods=['get', 'post'])
-    def issues(self, request, pk=None):
+
+class IssuesIntoProjectView(ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list_issues(self, request, id_project=None):
         """
         GET Method for issues details into project
         Return :
             - list of issues into project
         """
+        project = get_object_or_404(
+            Project, id=id_project)
+        users_access_ok = Contributor.objects.filter(
+            project=id_project, user=request.user.id)
+        if project and users_access_ok:
+            issues = Issue.objects.filter(Q(project=id_project) & (
+                Q(assignee_user=request.user.id) | Q(author_user=request.user.id)))
+            if not issues:
+                return Response("Not Issues for you in this project", status=status.HTTP_204_NO_CONTENT)
+            else:
+                serializer = IssueDetailsSerializer(issues, many=True)
+                return Response(serializer.data)
+        return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT ! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
+
+    def create_issue(self, request, id_project=None):
+        """
+        POST Method for issues details into project
+        Return :
+            - create a new issue into project
+        """
         projects = get_object_or_404(
-            Project, id=pk)
-        projects = Project.objects.filter(
-            contributor=request.user.id, id=pk).first()
-        if request.method == "GET":
-            if projects:
-                issues = Issue.objects.filter(
-                    project=projects)
-                if not issues:
-                    return Response("Not Issues for this project", status=status.HTTP_204_NO_CONTENT)
-                else:
-                    serializer = IssueSerializer(issues, many=True)
-                    return Response(serializer.data)
-        if request.method == "POST":
-            if projects:
-                serializer_issue_create = IssueSerializerCreate(
-                    data=request.data)
-                serializer_issue = IssueSerializer(data=request.data)
-                if serializer_issue_create.is_valid():
-                    issue_created = serializer_issue.create(
-                        request.data, projects, author=request.user)
-                    issue = Issue.objects.filter(id=issue_created.id)
-                    serializer = IssueSerializer(issue, many=True)
-                    return Response(serializer.data, status=status.HTTP_201_CREATED)
-                return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
+            Project, id=id_project)
+        users_access_ok = Contributor.objects.filter(
+            project=id_project, id=request.user.id).first()
+
+        if projects and users_access_ok:
+            serializer_issue_create = IssueSerializerCreate(
+                data=request.data)
+            serializer_issue = IssueSerializer(data=request.data)
+            if serializer_issue_create.is_valid():
+                issue_created = serializer_issue.create(
+                    request.data, projects, author=request.user)
+                issue = Issue.objects.filter(id=issue_created.id)
+                serializer = IssueSerializer(issue, many=True)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
         return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
+
+    def modify_issues(self, request, id_project=None, id_issue=None):
+        """
+        PUT Method for details project
+        Return :
+            - updated issue only by this author
+        """
+        project = get_object_or_404(
+            Project, id=id_project)
+        issue = Issue.objects.filter(
+            Q(id=id_issue) & Q(author_user=request.user.id))
+        if project and issue:
+            serializer_issue_create = IssueSerializerCreate(
+                data=request.data)
+            serializer_issue = IssueSerializer(data=request.data)
+            if serializer_issue_create.is_valid():
+                issue_modified = serializer_issue.put(request.data, id_issue)
+                issue = Issue.objects.filter(id=id_issue)
+                serializer = IssueDetailsSerializer(issue, many=True)
+                return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+            return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
+        return Response("YOU ARE NOT THE AUTHOR or CONTRIBUTOR OF THIS ISSUE! Update Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
+
+    def delete_issue(self, request, id_project=None, id_issue=None):
+        """
+        DELETE Method for details project
+        Return :
+            - delete issue only by this author
+        """
+        issue = get_object_or_404(
+            Issue, id=id_issue)
+        issue = Issue.objects.filter(
+            Q(id=id_issue) & Q(author_user=request.user.id))
+        if issue:
+            issue.delete()
+            return Response("SUCCESSFULLY", status=status.HTTP_202_ACCEPTED)
+        return Response("YOU ARE NOT THE AUTHOR or CONTRIBUTOR OF THIS ISSUE! Update Unauthorized", status=status.HTTP_401_UNAUTHORIZED)

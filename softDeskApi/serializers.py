@@ -97,6 +97,43 @@ class IssueSerializer(ModelSerializer):
         new_issue.save()
         return new_issue
 
+    def put(self, validated_data, pk):
+        issue = Issue.objects.filter(id=pk)
+        if validated_data.get('assignee_user', '') != "":
+            issue.update(
+                title=validated_data['title'],
+                description=validated_data['description'],
+                tag=validated_data['tag'],
+                priority=validated_data['priority'],
+                status=validated_data['status'],
+                assignee_user=validated_data['assignee_user']
+            )
+        else:
+            issue.update(
+                title=validated_data['title'],
+                description=validated_data['description'],
+                tag=validated_data['tag'],
+                priority=validated_data['priority'],
+                status=validated_data['status'],
+            )
+        return issue
+
+
+class IssueDetailsSerializer(ModelSerializer):
+    author_user = UserSerializer()
+    assignee_user = UserSerializer()
+
+    title = fields.CharField(required=True)
+    description = fields.CharField(required=True)
+    tag = fields.ChoiceField(choices=Issue.Tag_issue.choices)
+    priority = fields.ChoiceField(choices=Issue.Priority_issue.choices)
+    status = fields.ChoiceField(choices=Issue.Status_issue.choices)
+
+    class Meta:
+        model = Issue
+        fields = ['id', "created_time", 'title', 'description', 'tag', 'priority', 'status',
+                  "author_user", 'assignee_user']
+
 
 class IssueSerializerCreate(ModelSerializer):
     title = fields.CharField(required=True)

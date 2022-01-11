@@ -7,12 +7,6 @@ from authentication.models import User
 from softDeskApi.models import Comment, Contributor, Issue, Project
 
 
-class CommentSerializer(ModelSerializer):
-
-    class Meta:
-        model = Comment
-
-
 class ContributorSerializer(ModelSerializer):
     user = UserSerializer()
 
@@ -145,3 +139,13 @@ class IssueSerializerCreate(ModelSerializer):
     class Meta:
         model = Issue
         fields = ['title', 'description', 'tag', 'priority', 'status']
+
+
+class CommentSerializer(ModelSerializer):
+    description = fields.CharField(required=True)
+    author_user = UserSerializer()
+    issue = IssueDetailsSerializer()
+
+    class Meta:
+        model = Comment
+        fields = ['description', 'author_user', 'issue', 'created_time']

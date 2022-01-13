@@ -355,11 +355,12 @@ class CommentIntoProjectView(ViewSet):
             - HTTP_202 to successful delete
             - HTTP_404 if user_id is NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT or not existing project
         """
-        issue = get_object_or_404(
-            Issue, Q(id=id_issue) & Q(project_id=id_project))
+        comment = get_object_or_404(Comment, id=id_comment)
         issue_access = Issue.objects.filter(Q(id=id_issue) & (
             Q(assignee_user=request.user.id) | Q(author_user=request.user.id)) & Q(project_id=id_project))
-        if issue_access and issue:
+        comment_access = Comment.objects.filter(Q(id=id_comment) & (
+            Q(author_user=request.user.id)))
+        if issue_access and comment_access:
             comment = get_object_or_404(Comment, id=id_comment)
             comment.delete()
             return Response("SUCCESSFULLY", status=status.HTTP_202_ACCEPTED)

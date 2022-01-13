@@ -317,9 +317,11 @@ class CommentIntoProjectView(ViewSet):
             - get a comment into issue
         """
         comment = get_object_or_404(Comment, id=id_comment)
-        comment_access = Comment.objects.filter(Q(id=id_comment) & (
-            Q(author_user=request.user.id)))
-        if comment_access:
+        issue_access = Issue.objects.filter(Q(id=id_issue) & (
+            Q(assignee_user=request.user.id) | Q(author_user=request.user.id)) & Q(project_id=id_project))
+        if issue_access:
+            comment_access = Comment.objects.filter(Q(id=id_comment) & (
+                Q(author_user=request.user.id)))
             serializer = CommentSerializer(comment, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
@@ -331,11 +333,11 @@ class CommentIntoProjectView(ViewSet):
             - modify a comment into project
         """
         comment = get_object_or_404(Comment, id=id_comment)
-        issue = get_object_or_404(
-            Issue, Q(id=id_issue) & Q(project_id=id_project))
         issue_access = Issue.objects.filter(Q(id=id_issue) & (
             Q(assignee_user=request.user.id) | Q(author_user=request.user.id)) & Q(project_id=id_project))
-        if issue_access and issue:
+        comment_access = Comment.objects.filter(Q(id=id_comment) & (
+            Q(author_user=request.user.id)))
+        if issue_access and comment_access:
             serializer_comment_create = CommentSerializerCreate(
                 data=request.data)
             if serializer_comment_create.is_valid():
@@ -344,7 +346,7 @@ class CommentIntoProjectView(ViewSet):
                 serializer = CommentSerializer(comment, many=False)
                 return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
             return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
-        return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
+        return Response("YOU ARE NOT THE AUTHOR OF THIS COMMENT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
 
     def delete_comment(self, request, id_project=None, id_issue=None, id_comment=None):
         """
@@ -361,4 +363,4 @@ class CommentIntoProjectView(ViewSet):
             comment = get_object_or_404(Comment, id=id_comment)
             comment.delete()
             return Response("SUCCESSFULLY", status=status.HTTP_202_ACCEPTED)
-        return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
+        return Response("YOU ARE NOT THE AUTHOR OF THIS COMMENT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)

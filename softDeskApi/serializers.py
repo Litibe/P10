@@ -148,4 +148,25 @@ class CommentSerializer(ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['description', 'author_user', 'issue', 'created_time']
+        fields = ['id', 'description', 'created_time', 'author_user', 'issue']
+
+    def create(self, validated_data, author_user, issue):
+        comment = Comment.objects.create(description=validated_data['description'],
+                                         author_user=author_user,
+                                         issue=issue)
+        comment.save()
+        return comment
+
+
+class CommentSerializerCreate(ModelSerializer):
+    description = fields.CharField(required=True)
+
+    class Meta:
+        model = Comment
+        fields = ['description']
+
+    def put(self, validated_data, pk):
+        comment = Comment.objects.filter(id=pk)
+        comment.update(
+            description=validated_data['description'])
+        return comment

@@ -24,6 +24,8 @@ urlpatterns = [
 
     path('projects/<id_project>/issues/<id_issue>/comments/',
          CommentIntoProjectView.as_view({"get": "list_comments", "post": "create_comment"})),
+    path('projects/<id_project>/issues/<id_issue>/comments/<id_comment>/',
+         CommentIntoProjectView.as_view({'get': 'details_comment', "put": "modify_comment", "delete": "delete_comment"})),
 
     path('projects/<id_project>/users/',
          UserIntoProjectView.as_view({"get": "list_users_project", "post": "add_user_into_project"})),

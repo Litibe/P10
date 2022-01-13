@@ -12,7 +12,7 @@ from rest_framework.decorators import action
 from authentication.models import User
 from softDeskApi.models import Comment, Contributor, Issue, Project
 from authentication.serializers import UserSerializer
-from softDeskApi.serializers import CommentSerializer, ContributorSerializer, IssueSerializerCreate, IssueDetailsSerializer, IssueSerializer, ProjectSerializerCreate, ProjectSerializer, ProjectSerializerDetails
+from softDeskApi.serializers import CommentSerializer, CommentSerializerCreate, ContributorSerializer, IssueSerializerCreate, IssueDetailsSerializer, IssueSerializer, ProjectSerializerCreate, ProjectSerializer, ProjectSerializerDetails
 
 
 class ProjectListView(ViewSet):
@@ -87,7 +87,7 @@ class ProjectListView(ViewSet):
         """
         DELETE Method for details project
         Return :
-            - delete projects created by this Author
+            - SUCCESSFULL - HTTP_202_ACCEPTED
         """
         project = get_object_or_404(
             Project, id=pk)
@@ -155,7 +155,7 @@ class UserIntoProjectView(ViewSet):
 
     def del_user(self, request, id_project, id_user):
         """
-        DEL Method
+        DEL Method for user
         Return :
             - HTTP_202 to successful delete
             - HTTP_404 if user_id not into contributor Project or not existing project
@@ -286,26 +286,79 @@ class CommentIntoProjectView(ViewSet):
                 return Response(serializer.data)
         return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
 
-    def create_comment(self, request, id_project=None):
+    def create_comment(self, request, id_project=None, id_issue=None):
         """
-        POST Method for issues details into project
+        POST Method for add comment for an issue into project
         Return :
-            - create a new issue into project
+            - create a new comment into issue
         """
-        projects = get_object_or_404(
-            Project, id=id_project)
-        users_access_ok = Contributor.objects.filter(
-            project=id_project, id=request.user.id).first()
-
-        if projects and users_access_ok:
-            serializer_issue_create = IssueSerializerCreate(
+        issue = get_object_or_404(
+            Issue, Q(id=id_issue) & Q(project_id=id_project))
+        issue_access = Issue.objects.filter(Q(id=id_issue) & (
+            Q(assignee_user=request.user.id) | Q(author_user=request.user.id)) & Q(project_id=id_project))
+        if issue_access and issue:
+            serializer_comment_create = CommentSerializerCreate(
                 data=request.data)
-            serializer_issue = IssueSerializer(data=request.data)
-            if serializer_issue_create.is_valid():
-                issue_created = serializer_issue.create(
-                    request.data, projects, author=request.user)
-                issue = Issue.objects.filter(id=issue_created.id)
-                serializer = IssueSerializer(issue, many=True)
+            serializer_comment = CommentSerializer(
+                data=request.data)
+            if serializer_comment_create.is_valid():
+                comment_created = serializer_comment.create(
+                    request.data, author_user=request.user, issue=issue)
+                comment = Comment.objects.filter(id=comment_created.id)
+                serializer = CommentSerializer(comment, many=True)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
-        return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
+        return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
+
+    def details_comment(self, request, id_project=None, id_issue=None, id_comment=None):
+        """
+        GET Method for comment details
+        Return :
+            - get a comment into issue
+        """
+        comment = get_object_or_404(Comment, id=id_comment)
+        comment_access = Comment.objects.filter(Q(id=id_comment) & (
+            Q(author_user=request.user.id)))
+        if comment_access:
+            serializer = CommentSerializer(comment, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
+
+    def modify_comment(self, request, id_project=None, id_issue=None, id_comment=None):
+        """
+        PUT Method for comment
+        Return :
+            - modify a comment into project
+        """
+        comment = get_object_or_404(Comment, id=id_comment)
+        issue = get_object_or_404(
+            Issue, Q(id=id_issue) & Q(project_id=id_project))
+        issue_access = Issue.objects.filter(Q(id=id_issue) & (
+            Q(assignee_user=request.user.id) | Q(author_user=request.user.id)) & Q(project_id=id_project))
+        if issue_access and issue:
+            serializer_comment_create = CommentSerializerCreate(
+                data=request.data)
+            if serializer_comment_create.is_valid():
+                serializer_comment_create.put(request.data, id_comment)
+                comment = get_object_or_404(Comment, id=id_comment)
+                serializer = CommentSerializer(comment, many=False)
+                return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+            return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
+        return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
+
+    def delete_comment(self, request, id_project=None, id_issue=None, id_comment=None):
+        """
+        DELETE Method to delete comment
+        Return :
+            - HTTP_202 to successful delete
+            - HTTP_404 if user_id is NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT or not existing project
+        """
+        issue = get_object_or_404(
+            Issue, Q(id=id_issue) & Q(project_id=id_project))
+        issue_access = Issue.objects.filter(Q(id=id_issue) & (
+            Q(assignee_user=request.user.id) | Q(author_user=request.user.id)) & Q(project_id=id_project))
+        if issue_access and issue:
+            comment = get_object_or_404(Comment, id=id_comment)
+            comment.delete()
+            return Response("SUCCESSFULLY", status=status.HTTP_202_ACCEPTED)
+        return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)

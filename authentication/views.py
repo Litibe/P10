@@ -8,7 +8,7 @@ from authentication.serializers import UserSerializer
 class UserSignUpView(ViewSet):
     serializer_class = UserSerializer
 
-    def create(self, request, format=None):
+    def create_a_new_user(self, request, format=None):
         """
         POST Method
         Return :
@@ -18,4 +18,4 @@ class UserSignUpView(ViewSet):
         if serializer.is_valid():
             serializer.create(request.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_406_NOT_ACCEPTABLE)

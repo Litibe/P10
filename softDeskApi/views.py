@@ -1,18 +1,17 @@
 from django.conf import settings
-from django.db import models
 from django.db.models.query_utils import Q
-from django.shortcuts import get_object_or_404
-from rest_framework import serializers
-from rest_framework import generics, permissions, response, status
-from rest_framework.viewsets import ModelViewSet, ViewSet
-from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404, render
+from rest_framework import status
+from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import action
 from authentication.models import User
 from softDeskApi.models import Comment, Contributor, Issue, Project
-from authentication.serializers import UserSerializer
 from softDeskApi.serializers import CommentSerializer, CommentSerializerCreate, ContributorSerializer, IssueSerializerCreate, IssueDetailsSerializer, IssueSerializer, ProjectSerializerCreate, ProjectSerializer, ProjectSerializerDetails
+
+
+def main_page(request):
+    return render(request, "softDeskApi/index.html")
 
 
 class ProjectListView(ViewSet):
@@ -21,7 +20,7 @@ class ProjectListView(ViewSet):
 
     serializer_details_for_project = ProjectSerializerDetails
 
-    def list(self, request):
+    def list_projects(self, request):
         """
         GET Method
         Return :
@@ -32,7 +31,7 @@ class ProjectListView(ViewSet):
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data)
 
-    def create(self, request):
+    def create_project(self, request):
         """
         POST Method
         Return :
@@ -51,7 +50,14 @@ class ProjectListView(ViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response("ERROR TO CREATE PROJECT", status=status.HTTP_406_NOT_ACCEPTABLE)
 
-    def retrieve(self, request, pk):
+
+class ProjectView(ViewSet):
+    serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticated]
+
+    serializer_details_for_project = ProjectSerializerDetails
+
+    def details_project(self, request, pk):
         """
         GET Method for details project
         Return :
@@ -64,7 +70,7 @@ class ProjectListView(ViewSet):
             return Response(serializer.data)
         return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
 
-    def update(self, request, pk):
+    def update_project(self, request, pk):
         """
         PUT Method for details project
         Return :
@@ -83,7 +89,7 @@ class ProjectListView(ViewSet):
             return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
         return Response("YOU ARE NOT THE AUTHOR OF THIS PROJECT ! Update Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
 
-    def destroy(self, request, pk):
+    def del_project(self, request, pk):
         """
         DELETE Method for details project
         Return :
@@ -211,13 +217,12 @@ class IssuesIntoProjectView(ViewSet):
         projects = get_object_or_404(
             Project, id=id_project)
         users_access_ok = Contributor.objects.filter(
-            project=id_project, id=request.user.id).first()
-
+            project=id_project, user=request.user).first()
         if projects and users_access_ok:
-            serializer_issue_create = IssueSerializerCreate(
-                data=request.data)
+            # serializer_issue_create = IssueSerializerCreate(
+            # data=request.data)
             serializer_issue = IssueSerializer(data=request.data)
-            if serializer_issue_create.is_valid():
+            if serializer_issue.is_valid():
                 issue_created = serializer_issue.create(
                     request.data, projects, author=request.user)
                 issue = Issue.objects.filter(id=issue_created.id)
@@ -361,7 +366,6 @@ class CommentIntoProjectView(ViewSet):
         comment_access = Comment.objects.filter(Q(id=id_comment) & (
             Q(author_user=request.user.id)))
         if issue_access and comment_access:
-            comment = get_object_or_404(Comment, id=id_comment)
             comment.delete()
             return Response("SUCCESSFULLY", status=status.HTTP_202_ACCEPTED)
         return Response("YOU ARE NOT THE AUTHOR OF THIS COMMENT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)

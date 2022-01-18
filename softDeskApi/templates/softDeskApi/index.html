@@ -1,0 +1,40 @@
+{% extends 'softDeskApi/base.html' %} {% load static %} {% block content %}
+
+<div class="container">
+  <div class="row">
+    <div class="col-12 d-flex flex-row align-top">
+      <div class="col-4 text-center">
+        <img
+          src="{% static 'softDeskApi/img/logo.png' %}"
+          alt="Logo de SoftDesk"
+          width="50%"
+        />
+      </div>
+      <div class="p-2">
+        <h1 class="text-center p-3">
+          Bienvenue sur SoftDesk !
+        </h1>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container mb-5">
+  <div class="row d-flex justify-content-around mb-5">
+    <div class="col-11 col-md-5 p-3 m-3 shadow">
+      <h2 class="p-2 text-center">
+        Afin d'utiliser les services de l'API, consulter la documentation : 
+      </h2>
+      <div class="text-center">
+        <button class="btn btn-warning m-2" type="submit">
+          <a
+            href="https://documenter.getpostman.com/view/16769688/UVXdQegN"
+            style="color: inherit; text-decoration: none"
+            >Accès à la documentation API</a
+          >
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

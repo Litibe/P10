@@ -58,9 +58,9 @@ class ProjectSerializerDetails(ModelSerializer):
 
 
 class IssueSerializer(ModelSerializer):
-    project = ProjectSerializer()
-    author_user = UserSerializer()
-    assignee_user = UserSerializer()
+    project = ProjectSerializer(read_only=True)
+    author_user = UserSerializer(read_only=True)
+    assignee_user = UserSerializer(read_only=True)
 
     title = fields.CharField(required=True)
     description = fields.CharField(required=True)

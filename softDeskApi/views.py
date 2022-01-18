@@ -57,48 +57,49 @@ class ProjectView(ViewSet):
 
     serializer_details_for_project = ProjectSerializerDetails
 
-    def details_project(self, request, pk):
+    def details_project(self, request, id_project):
         """
         GET Method for details project
         Return :
             - details projects where user_logged is in list contributor/author of project
         """
-        project = get_object_or_404(Project, id=pk)
-        projects = Project.objects.filter(contributor=request.user.id, id=pk)
+        project = get_object_or_404(Project, id=id_project)
+        projects = Project.objects.filter(
+            contributor=request.user.id, id=id_project)
         if projects.exists():
             serializer = ProjectSerializer(projects, many=True)
             return Response(serializer.data)
         return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
 
-    def update_project(self, request, pk):
+    def update_project(self, request, id_project):
         """
         PUT Method for details project
         Return :
             - updated projects only by this author
         """
 
-        project = get_object_or_404(Project, id=pk)
+        project = get_object_or_404(Project, id=id_project)
         author = Contributor.objects.filter(
-            project=pk, role="AUTHOR").first()
+            project=id_project, role="AUTHOR").first()
         if author.user.id == request.user.id:
             serializer = ProjectSerializerDetails(
                 data=request.data)
             if serializer.is_valid():
-                serializer.put(serializer.data, pk)
+                serializer.put(serializer.data, id_project)
                 return Response(serializer.data)
             return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
         return Response("YOU ARE NOT THE AUTHOR OF THIS PROJECT ! Update Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
 
-    def del_project(self, request, pk):
+    def delete_project(self, request, id_project):
         """
         DELETE Method for details project
         Return :
             - SUCCESSFULL - HTTP_202_ACCEPTED
         """
         project = get_object_or_404(
-            Project, id=pk)
+            Project, id=id_project)
         author = Contributor.objects.filter(
-            project=pk, role="AUTHOR").first()
+            project=id_project, role="AUTHOR").first()
         if author.user.id == request.user.id:
             project.delete()
             return Response("SUCCESSFULLY", status=status.HTTP_202_ACCEPTED)

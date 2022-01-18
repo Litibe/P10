@@ -18,6 +18,7 @@ urlpatterns = [
                               "post": "create_project",
                               "put": "update_project",
                               "delete": "delete_project"}), name='project'),
+
     path('projects/<id_project>/issues/',
          IssuesIntoProjectView.as_view({"get": "list_issues", "post": "create_issue"}), name='issues'),
     path('projects/<id_project>/issues/<id_issue>/',

@@ -10,7 +10,7 @@ from rest_framework.authtoken.models import Token
 from authentication.models import User
 from authentication.serializers import UserSerializer
 from authentication.views import UserSignUpView
-from softDeskApi.models import Project, Issue, Comment
+from softDeskApi.models import Project, Issue, Comment, Contributor
 from softDeskApi.views import ProjectView
 
 
@@ -127,8 +127,32 @@ class TestProjects(TestCase):
                                     last_name="Test2")
         user2.set_password("motdepasse2022")
         user2.save()
+        user3 = User.objects.create(email="motdepasse2022@djangotest3.fr",
+                                    first_name="Django3",
+                                    last_name="Test3")
+        user3.set_password("motdepasse2022")
+        user3.save()
 
-    def test_post_projects(self):
+    def integrations_projects(self):
+        project1 = Project.objects.create(title="Test_project Mobile API",
+                                          description="Mise en évidence d'une serie de tests pour l'application Mobile",
+                                          type="IOS")
+        project1.save()
+        author_p1 = Contributor.objects.create(user=User.objects.get(
+            email="motdepasse2022@djangotest1.fr"), project=Project.objects.filter(id=1).first(), role="AUTHOR")
+        author_p1.save()
+        contrib_p1 = Contributor.objects.create(user=User.objects.get(
+            email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=1).first(), role="CONTRIBUTOR")
+        contrib_p1.save()
+        project2 = Project.objects.create(title="Test_project Fonted",
+                                          description="Mise en évidence une faille identification partie Panier",
+                                          type="FRONTED")
+        project2.save()
+        author_p2 = Contributor.objects.create(user=User.objects.get(
+            email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=2).first(), role="AUTHOR")
+        author_p2.save()
+
+    def test_POST_projects(self):
         print(self.OKBLUE+"SECTION TEST PROJECTS"+self.ENDC)
         """
         Test POST Method for create a Project
@@ -149,7 +173,7 @@ class TestProjects(TestCase):
                 }
         response = self.client.post(url, data=data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        print(self.FAIL+"GET_Projects_Without_TOKEN_401 OK"+self.ENDC)
+        print(self.FAIL+"POST_Projects_Without_TOKEN_401 OK"+self.ENDC)
         print(json.loads(response.content))
 
         access_token = 'Bearer ' + request.get('access')
@@ -159,5 +183,54 @@ class TestProjects(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Project.objects.get().title,
                          "Test_project Mobile API")
+        p1 = Project.objects.get(id=1)
+        p1.delete()
+        print(self.OKGREEN+"POST_Projects_200 OK"+self.ENDC)
+        print(json.loads(response.content))
+
+    def test_GET_projects(self):
+        """
+        Test GET Method for LIST PROJECTS ASSIGNED 
+        """
+        self.integration_users()
+        self.integrations_projects()
+        # without login
+        url = reverse("projects")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        print(self.FAIL+"GET_Projects_Without_LOGIN_401 OK"+self.ENDC)
+        print(json.loads(response.content))
+
+        # login user 3 without Project
+        url = reverse("login")
+        data = {
+            "email": "motdepasse2022@djangotest3.fr",
+            "password": "motdepasse2022",
+        }
+        response = self.client.post(url, data=data, format='json')
+        request = json.loads(response.content)
+        access_token = 'Bearer ' + request.get('access')
+        headers = {'HTTP_AUTHORIZATION': access_token}
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token
+        url = reverse("projects")
+        response = self.client.get(url, data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        print(self.OKGREEN+"GET_Projects_Without_Project_assigned_200 OK"+self.ENDC)
+        print(json.loads(response.content))
+
+        # login user1 with Project 1 only
+        url = reverse("login")
+        data = {
+            "email": "motdepasse2022@djangotest1.fr",
+            "password": "motdepasse2022",
+        }
+        response = self.client.post(url, data=data, format='json')
+        request = json.loads(response.content)
+        access_token = 'Bearer ' + request.get('access')
+        headers = {'HTTP_AUTHORIZATION': access_token}
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token
+        url = reverse("projects")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         print(self.OKGREEN+"GET_Projects_200 OK"+self.ENDC)
         print(json.loads(response.content))

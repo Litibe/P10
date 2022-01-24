@@ -1,6 +1,5 @@
-from django.db.models.fields import CharField
-from rest_framework import fields, status
-from rest_framework.serializers import ModelSerializer, HiddenField, CurrentUserDefault
+from rest_framework import fields
+from rest_framework.serializers import ModelSerializer
 from authentication.serializers import UserSerializer
 from authentication.models import User
 
@@ -26,9 +25,10 @@ class ProjectSerializerCreate(ModelSerializer):
         fields = ['id', 'title', 'description', 'type']
 
     def create(self, validated_data):
-        project = Project.objects.create(title=validated_data['title'],
-                                         description=validated_data['description'],
-                                         type=validated_data['type'])
+        project = Project.objects.create(
+            title=validated_data['title'],
+            description=validated_data['description'],
+            type=validated_data['type'])
         project.save()
         return project
 
@@ -53,7 +53,9 @@ class ProjectSerializerDetails(ModelSerializer):
     def put(self, validated_data, pk):
         project = Project.objects.filter(id=pk)
         project.update(
-            title=validated_data['title'], description=validated_data['description'], type=validated_data['type'])
+            title=validated_data['title'],
+            description=validated_data['description'],
+            type=validated_data['type'])
         return project
 
 
@@ -79,15 +81,16 @@ class IssueSerializer(ModelSerializer):
                 email=validated_data.get('assignee_user', '')).first()
         else:
             assignee = author
-        new_issue = Issue.objects.create(title=validated_data['title'],
-                                         description=validated_data['description'],
-                                         tag=validated_data['tag'],
-                                         priority=validated_data['priority'],
-                                         status=validated_data["status"],
-                                         project=project_object,
-                                         author_user=author,
-                                         assignee_user=assignee
-                                         )
+        new_issue = Issue.objects.create(
+            title=validated_data['title'],
+            description=validated_data['description'],
+            tag=validated_data['tag'],
+            priority=validated_data['priority'],
+            status=validated_data["status"],
+            project=project_object,
+            author_user=author,
+            assignee_user=assignee
+        )
         new_issue.save()
         return new_issue
 
@@ -125,7 +128,8 @@ class IssueDetailsSerializer(ModelSerializer):
 
     class Meta:
         model = Issue
-        fields = ['id', "created_time", 'title', 'description', 'tag', 'priority', 'status',
+        fields = ['id', "created_time", 'title',
+                  'description', 'tag', 'priority', 'status',
                   "author_user", 'assignee_user']
 
 
@@ -139,9 +143,10 @@ class CommentSerializer(ModelSerializer):
         fields = ['id', 'description', 'created_time', 'author_user', 'issue']
 
     def create(self, validated_data, author_user, issue):
-        comment = Comment.objects.create(description=validated_data['description'],
-                                         author_user=author_user,
-                                         issue=issue)
+        comment = Comment.objects.create(
+            description=validated_data['description'],
+            author_user=author_user,
+            issue=issue)
         comment.save()
         return comment
 

@@ -17,5 +17,7 @@ class UserSignUpView(ViewSet):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.create(request.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_406_NOT_ACCEPTABLE)
+            return Response(serializer.data,
+                            status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,
+                        status=status.HTTP_406_NOT_ACCEPTABLE)

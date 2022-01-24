@@ -1,18 +1,11 @@
 import json
-import time
 from django.urls import reverse
 from rest_framework import status
 from django.test import TestCase
-from rest_framework.test import APIClient, force_authenticate
-from rest_framework.authtoken.models import Token
 
 
 from authentication.models import User
-from authentication.serializers import UserSerializer
-from authentication.views import UserSignUpView
-from softDeskApi.models import Project, Issue, Comment, Contributor
-from softDeskApi.serializers import ProjectSerializerDetails
-from softDeskApi.views import ProjectView
+from softDeskApi.models import Project, Contributor
 
 
 class Test_A_Users(TestCase):
@@ -134,22 +127,29 @@ class Test_B_Projects(TestCase):
         user3.save()
 
     def integrations_projects(self):
+        description = "Mise en évidence d'une serie de \
+            tests pour l'application Mobile"
         project1 = Project.objects.create(title="Test_project Mobile API",
-                                          description="Mise en évidence d'une serie de tests pour l'application Mobile",
+                                          description=description,
                                           type="IOS")
         project1.save()
         author_p1 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest1.fr"), project=Project.objects.filter(id=1).first(), role="AUTHOR")
+            email="motdepasse2022@djangotest1.fr"),
+            project=Project.objects.filter(id=1).first(), role="AUTHOR")
         author_p1.save()
         contrib_p1 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=1).first(), role="CONTRIBUTOR")
+            email="motdepasse2022@djangotest2.fr"),
+            project=Project.objects.filter(id=1).first(), role="CONTRIBUTOR")
         contrib_p1.save()
+        description = "Mise en évidence une faille \
+            identification partie Panier"
         project2 = Project.objects.create(title="Test_project Fonted",
-                                          description="Mise en évidence une faille identification partie Panier",
+                                          description=description,
                                           type="FRONTED")
         project2.save()
         author_p2 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=2).first(), role="AUTHOR")
+            email="motdepasse2022@djangotest2.fr"),
+            project=Project.objects.filter(id=2).first(), role="AUTHOR")
         author_p2.save()
 
     def test_POST_projects(self):
@@ -167,7 +167,8 @@ class Test_B_Projects(TestCase):
 
         url = reverse("projects")
         data = {'title': "Test_project Mobile API",
-                "description": "Mise en évidence d'une serie de tests pour l'application Mobile",
+                "description": "Mise en évidence d'une \
+                    serie de tests pour l'application Mobile",
                 "type": "IOS"
                 }
         response = self.client.post(url, data, format='json')
@@ -188,7 +189,7 @@ class Test_B_Projects(TestCase):
 
     def test_GET_projects(self):
         """
-        Test GET Method for LIST PROJECTS ASSIGNED 
+        Test GET Method for LIST PROJECTS ASSIGNED
         """
         self.integration_users()
         self.integrations_projects()
@@ -212,7 +213,8 @@ class Test_B_Projects(TestCase):
         url = reverse("projects")
         response = self.client.get(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        print(self.OKGREEN+"GET_Projects_Without_Project_assigned_200 OK"+self.ENDC)
+        print(self.OKGREEN+"GET_Projects_Without_\
+            Project_assigned_200 OK"+self.ENDC)
         print(json.loads(response.content))
 
         # login user1 with Project 1 only
@@ -261,22 +263,29 @@ class Test_C_ProjectDetails(TestCase):
         user3.save()
 
     def integrations_projects(self):
+        description = "Mise en évidence d'une serie \
+            de tests pour l'application Mobile"
         project1 = Project.objects.create(title="Test_project Mobile API",
-                                          description="Mise en évidence d'une serie de tests pour l'application Mobile",
+                                          description=description,
                                           type="IOS")
         project1.save()
         author_p1 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest1.fr"), project=Project.objects.filter(id=1).first(), role="AUTHOR")
+            email="motdepasse2022@djangotest1.fr"),
+            project=Project.objects.filter(id=1).first(), role="AUTHOR")
         author_p1.save()
         contrib_p1 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=1).first(), role="CONTRIBUTOR")
+            email="motdepasse2022@djangotest2.fr"),
+            project=Project.objects.filter(id=1).first(), role="CONTRIBUTOR")
         contrib_p1.save()
+        description = "Mise en évidence une faille \
+            identification partie Panier"
         project2 = Project.objects.create(title="Test_project Fonted",
-                                          description="Mise en évidence une faille identification partie Panier",
+                                          description=description,
                                           type="FRONTED")
         project2.save()
         author_p2 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=2).first(), role="AUTHOR")
+            email="motdepasse2022@djangotest2.fr"),
+            project=Project.objects.filter(id=2).first(), role="AUTHOR")
         author_p2.save()
 
     def test_PUT_project(self):
@@ -295,8 +304,10 @@ class Test_C_ProjectDetails(TestCase):
         access_token = 'Bearer ' + request.get('access')
 
         url = reverse("project", kwargs={'id_project': 1})
+        description = "Mise en évidence d'une \
+            serie de tests pour l'application Mobile modified"
         data = {'title': "Test_project Mobile API modified",
-                "description": "Mise en évidence d'une serie de tests pour l'application Mobile modified",
+                "description": description,
                 "type": "IOS"
                 }
         response = self.client.put(url, data, format='json')
@@ -413,19 +424,25 @@ class Test_D_ContributorProject(TestCase):
         user3.save()
 
     def integrations_projects(self):
+        description = "Mise en évidence d'une serie \
+            de tests pour l'application Mobile"
         project1 = Project.objects.create(title="Test_project Mobile API",
-                                          description="Mise en évidence d'une serie de tests pour l'application Mobile",
+                                          description=description,
                                           type="IOS")
         project1.save()
         author_p1 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest1.fr"), project=Project.objects.filter(id=1).first(), role="AUTHOR")
+            email="motdepasse2022@djangotest1.fr"),
+            project=Project.objects.filter(id=1).first(), role="AUTHOR")
         author_p1.save()
+        description = "Mise en évidence une faille \
+            identification partie Panier"
         project2 = Project.objects.create(title="Test_project Fonted",
-                                          description="Mise en évidence une faille identification partie Panier",
+                                          description=description,
                                           type="FRONTED")
         project2.save()
         author_p2 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=2).first(), role="AUTHOR")
+            email="motdepasse2022@djangotest2.fr"),
+            project=Project.objects.filter(id=2).first(), role="AUTHOR")
         author_p2.save()
 
     def test_GET_contributor_of_project(self):
@@ -446,7 +463,8 @@ class Test_D_ContributorProject(TestCase):
         url = reverse("contributors", kwargs={'id_project': 1})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        print(self.FAIL+"GET_ContributorProject_Without_ACCESS_401 OK"+self.ENDC)
+        print(self.FAIL+"GET_ContributorProject_Without\
+            _ACCESS_401 OK"+self.ENDC)
         print(json.loads(response.content))
 
         url = reverse("login")
@@ -482,7 +500,8 @@ class Test_D_ContributorProject(TestCase):
         url = reverse("contributors", kwargs={'id_project': 1})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        print(self.FAIL+"POST_ContributorProject_Without_ACCESS_AUTHOR_401 OK"+self.ENDC)
+        print(self.FAIL+"POST_ContributorProject\
+            _Without_ACCESS_AUTHOR_401 OK"+self.ENDC)
         print(json.loads(response.content))
 
         url = reverse("login")
@@ -519,7 +538,8 @@ class Test_D_ContributorProject(TestCase):
                       'id_project': 1, 'id_user': 2})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        print(self.FAIL+"DELETE_ContributorProject_Without_ACCESS_AUTHOR_401 OK"+self.ENDC)
+        print(self.FAIL+"DELETE_ContributorProject_\
+            Without_ACCESS_AUTHOR_401 OK"+self.ENDC)
         print(json.loads(response.content))
 
         url = reverse("login")
@@ -571,19 +591,25 @@ class Test_E_IssuesProject(TestCase):
         user3.save()
 
     def integrations_projects(self):
+        description = "Mise en évidence d'une \
+            serie de tests pour l'application Mobile"
         project1 = Project.objects.create(title="Test_project Mobile API",
-                                          description="Mise en évidence d'une serie de tests pour l'application Mobile",
+                                          description=description,
                                           type="IOS")
         project1.save()
         author_p1 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest1.fr"), project=Project.objects.filter(id=1).first(), role="AUTHOR")
+            email="motdepasse2022@djangotest1.fr"),
+            project=Project.objects.filter(id=1).first(), role="AUTHOR")
         author_p1.save()
+        description = "Mise en évidence une faille \
+            identification partie Panier"
         project2 = Project.objects.create(title="Test_project Fonted",
-                                          description="Mise en évidence une faille identification partie Panier",
+                                          description=description,
                                           type="FRONTED")
         project2.save()
         author_p2 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=2).first(), role="AUTHOR")
+            email="motdepasse2022@djangotest2.fr"),
+            project=Project.objects.filter(id=2).first(), role="AUTHOR")
         author_p2.save()
 
     def login_user_1(self):
@@ -626,7 +652,8 @@ class Test_E_IssuesProject(TestCase):
         self.client.defaults['HTTP_AUTHORIZATION'] = access_token3
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        print(self.FAIL+"POST_Issue_Without_ACCESS_AUTHOR_401 OK"+self.ENDC)
+        print(self.FAIL+"POST_Issue_Without_\
+            ACCESS_AUTHOR_401 OK"+self.ENDC)
         print(json.loads(response.content))
 
         access_token1 = self.login_user_1()
@@ -816,19 +843,25 @@ class Test_F_CommentProject(TestCase):
         user3.save()
 
     def integrations_projects(self):
+        description = "Mise en évidence d'une serie de \
+            tests pour l'application Mobile"
         project1 = Project.objects.create(title="Test_project Mobile API",
-                                          description="Mise en évidence d'une serie de tests pour l'application Mobile",
+                                          description=description,
                                           type="IOS")
         project1.save()
         author_p1 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest1.fr"), project=Project.objects.filter(id=1).first(), role="AUTHOR")
+            email="motdepasse2022@djangotest1.fr"),
+            project=Project.objects.filter(id=1).first(), role="AUTHOR")
         author_p1.save()
+        description = "Mise en évidence une faille \
+            identification partie Panier"
         project2 = Project.objects.create(title="Test_project Fonted",
-                                          description="Mise en évidence une faille identification partie Panier",
+                                          description=description,
                                           type="FRONTED")
         project2.save()
         author_p2 = Contributor.objects.create(user=User.objects.get(
-            email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=2).first(), role="AUTHOR")
+            email="motdepasse2022@djangotest2.fr"),
+            project=Project.objects.filter(id=2).first(), role="AUTHOR")
         author_p2.save()
 
     def login_user_1(self):

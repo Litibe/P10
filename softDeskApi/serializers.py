@@ -71,7 +71,7 @@ class IssueSerializer(ModelSerializer):
     class Meta:
         model = Issue
         fields = ['id', 'title', 'description', 'tag', 'priority', 'status',
-                  "author_user", 'assignee_user', 'project', "created_time"]
+                  "author_user", 'assignee_user',  "created_time", 'project']
 
     def create(self, validated_data, project_object, author):
         if validated_data.get('assignee_user', '') != '':
@@ -127,18 +127,6 @@ class IssueDetailsSerializer(ModelSerializer):
         model = Issue
         fields = ['id', "created_time", 'title', 'description', 'tag', 'priority', 'status',
                   "author_user", 'assignee_user']
-
-
-class IssueSerializerCreate(ModelSerializer):
-    title = fields.CharField(required=True)
-    description = fields.CharField(required=True)
-    tag = fields.ChoiceField(choices=Issue.Tag_issue.choices)
-    priority = fields.ChoiceField(choices=Issue.Priority_issue.choices)
-    status = fields.ChoiceField(choices=Issue.Status_issue.choices)
-
-    class Meta:
-        model = Issue
-        fields = ['title', 'description', 'tag', 'priority', 'status']
 
 
 class CommentSerializer(ModelSerializer):

@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db.models.query_utils import Q
 from django.shortcuts import get_object_or_404, render
 from rest_framework import status
@@ -7,18 +6,15 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from authentication.models import User
 from softDeskApi.models import Comment, Contributor, Issue, Project
-from softDeskApi.serializers import CommentSerializer, CommentSerializerCreate, ContributorSerializer, IssueSerializerCreate, IssueDetailsSerializer, IssueSerializer, ProjectSerializerCreate, ProjectSerializer, ProjectSerializerDetails
+from softDeskApi.serializers import CommentSerializer, CommentSerializerCreate, ContributorSerializer, IssueDetailsSerializer, IssueSerializer, ProjectSerializerCreate, ProjectSerializer, ProjectSerializerDetails
 
 
 def main_page(request):
     return render(request, "softDeskApi/index.html")
 
 
-class ProjectListView(ViewSet):
-    serializer_class = ProjectSerializer
+class ProjectsListView(ViewSet):
     permission_classes = [IsAuthenticated]
-
-    serializer_details_for_project = ProjectSerializerDetails
 
     def list_projects(self, request):
         """
@@ -52,10 +48,7 @@ class ProjectListView(ViewSet):
 
 
 class ProjectView(ViewSet):
-    serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
-
-    serializer_details_for_project = ProjectSerializerDetails
 
     def details_project(self, request, id_project):
         """
@@ -63,11 +56,11 @@ class ProjectView(ViewSet):
         Return :
             - details projects where user_logged is in list contributor/author of project
         """
-        project = get_object_or_404(Project, id=id_project)
-        projects = Project.objects.filter(
+        get_object_or_404(Project, id=id_project)
+        project = Project.objects.filter(
             contributor=request.user.id, id=id_project)
-        if projects.exists():
-            serializer = ProjectSerializer(projects, many=True)
+        if project.exists():
+            serializer = ProjectSerializer(project.first(), many=False)
             return Response(serializer.data)
         return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
 
@@ -77,8 +70,7 @@ class ProjectView(ViewSet):
         Return :
             - updated projects only by this author
         """
-
-        project = get_object_or_404(Project, id=id_project)
+        get_object_or_404(Project, id=id_project)
         author = Contributor.objects.filter(
             project=id_project, role="AUTHOR").first()
         if author.user.id == request.user.id:
@@ -109,7 +101,7 @@ class ProjectView(ViewSet):
 class UserIntoProjectView(ViewSet):
     permission_classes = [IsAuthenticated]
 
-    def list_users_project(self, request, id_project=None):
+    def list_users_project(self, request, id_project):
         """
         GET Method for users details into project
         Return :
@@ -117,16 +109,16 @@ class UserIntoProjectView(ViewSet):
         """
         project = get_object_or_404(
             Project, id=id_project)
-        contributors_into_project = Contributor.objects.filter(
+        if_user_into_project = Contributor.objects.filter(
             project_id=id_project, user=request.user.id)
-        if project and contributors_into_project:
+        if project and if_user_into_project:
             contributors = Contributor.objects.filter(
                 project_id=id_project)
             serializer = ContributorSerializer(contributors, many=True)
             return Response(serializer.data)
         return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT ! Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
 
-    def add_user_into_project(self, request, id_project=None):
+    def add_user_into_project(self, request, id_project):
         """
         POST Method for users details into project
         Return :
@@ -141,12 +133,12 @@ class UserIntoProjectView(ViewSet):
                 email=request.data.get('email', '')).first()
             if not new_contributor:
                 return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
-            contributor_not_in_projects = Project.objects.filter(
+            contributor_in_projects = Project.objects.filter(
                 contributor=new_contributor.id, id=id_project)
-            if contributor_not_in_projects:
+            if contributor_in_projects:
                 return Response("User Already into current project", status=status.HTTP_409_CONFLICT)
 
-            if new_contributor and not contributor_not_in_projects:
+            if new_contributor and not contributor_in_projects:
                 contributor = Contributor.objects.create(
                     user=new_contributor, project=project, role="CONTRIBUTOR")
                 contributor.save()
@@ -167,8 +159,6 @@ class UserIntoProjectView(ViewSet):
             - HTTP_202 to successful delete
             - HTTP_404 if user_id not into contributor Project or not existing project
         """
-
-        project = get_object_or_404(Project, id=id_project)
         contributor = get_object_or_404(
             Contributor, user=id_user, project=id_project, role="CONTRIBUTOR")
         author = Contributor.objects.filter(
@@ -209,7 +199,7 @@ class IssuesIntoProjectView(ViewSet):
                 return Response(serializer.data)
         return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT ! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
 
-    def create_issue(self, request, id_project=None):
+    def create_issue(self, request, id_project):
         """
         POST Method for issues details into project
         Return :
@@ -220,8 +210,6 @@ class IssuesIntoProjectView(ViewSet):
         users_access_ok = Contributor.objects.filter(
             project=id_project, user=request.user).first()
         if projects and users_access_ok:
-            # serializer_issue_create = IssueSerializerCreate(
-            # data=request.data)
             serializer_issue = IssueSerializer(data=request.data)
             if serializer_issue.is_valid():
                 issue_created = serializer_issue.create(
@@ -232,7 +220,7 @@ class IssuesIntoProjectView(ViewSet):
             return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
         return Response("YOU ARE NOT IN CONTRIBUTOR_PROJECT !", status=status.HTTP_401_UNAUTHORIZED)
 
-    def modify_issues(self, request, id_project=None, id_issue=None):
+    def modify_issues(self, request, id_project, id_issue):
         """
         PUT Method for details project
         Return :
@@ -243,10 +231,8 @@ class IssuesIntoProjectView(ViewSet):
         issue = Issue.objects.filter(
             Q(id=id_issue) & Q(author_user=request.user.id))
         if project and issue:
-            serializer_issue_create = IssueSerializerCreate(
-                data=request.data)
             serializer_issue = IssueSerializer(data=request.data)
-            if serializer_issue_create.is_valid():
+            if serializer_issue.is_valid():
                 issue_modified = serializer_issue.put(request.data, id_issue)
                 issue = Issue.objects.filter(id=id_issue)
                 serializer = IssueDetailsSerializer(issue, many=True)
@@ -254,7 +240,7 @@ class IssuesIntoProjectView(ViewSet):
             return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
         return Response("YOU ARE NOT THE AUTHOR OF THIS ISSUE! Update Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
 
-    def delete_issue(self, request, id_project=None, id_issue=None):
+    def delete_issue(self, request, id_project, id_issue):
         """
         DELETE Method for details project
         Return :
@@ -273,7 +259,7 @@ class IssuesIntoProjectView(ViewSet):
 class CommentIntoProjectView(ViewSet):
     permission_classes = [IsAuthenticated]
 
-    def list_comments(self, request, id_project=None, id_issue=None):
+    def list_comments(self, request, id_project, id_issue):
         """
         GET Method for comments details for an issue into project
         Return :
@@ -292,7 +278,7 @@ class CommentIntoProjectView(ViewSet):
                 return Response(serializer.data)
         return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
 
-    def create_comment(self, request, id_project=None, id_issue=None):
+    def create_comment(self, request, id_project, id_issue):
         """
         POST Method for add comment for an issue into project
         Return :
@@ -316,7 +302,7 @@ class CommentIntoProjectView(ViewSet):
             return Response("INPUT ERROR", status=status.HTTP_406_NOT_ACCEPTABLE)
         return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
 
-    def details_comment(self, request, id_project=None, id_issue=None, id_comment=None):
+    def details_comment(self, request, id_project, id_issue, id_comment):
         """
         GET Method for comment details
         Return :
@@ -332,7 +318,7 @@ class CommentIntoProjectView(ViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response("YOU ARE NOT THE AUTHOR OR THE USER ASSIGNEE OF THIS ISSUE/PROJECT! UNAUTHORIZED ACCESS", status=status.HTTP_401_UNAUTHORIZED)
 
-    def modify_comment(self, request, id_project=None, id_issue=None, id_comment=None):
+    def modify_comment(self, request, id_project, id_issue, id_comment):
         """
         PUT Method for comment
         Return :

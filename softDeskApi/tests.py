@@ -586,27 +586,10 @@ class Test_E_IssuesProject(TestCase):
             email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=2).first(), role="AUTHOR")
         author_p2.save()
 
-    def test_POST_issue_of_project(self):
+    def login_user_1(self):
         """
-        Test POST Method to add issue into project
+        login user_1 and return access token
         """
-        self.integration_users()
-        self.integrations_projects()
-        url = reverse("login")
-        data = {
-            "email": "motdepasse2022@djangotest3.fr",
-            "password": "motdepasse2022",
-        }
-        response = self.client.post(url, data, content_type='application/json')
-        request = json.loads(response.content)
-        access_token = 'Bearer ' + request.get('access')
-
-        url = reverse("issues", kwargs={'id_project': 1})
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        print(self.FAIL+"POST_Issue_Without_ACCESS_AUTHOR_401 OK"+self.ENDC)
-        print(json.loads(response.content))
-
         url = reverse("login")
         data = {
             "email": "motdepasse2022@djangotest1.fr",
@@ -615,13 +598,45 @@ class Test_E_IssuesProject(TestCase):
         response = self.client.post(url, data, content_type='application/json')
         request = json.loads(response.content)
         access_token = 'Bearer ' + request.get('access')
+        return access_token
+
+    def login_user_3(self):
+        """
+        login user_3 without any project and return access token
+        """
+        url = reverse("login")
+        data = {
+            "email": "motdepasse2022@djangotest3.fr",
+            "password": "motdepasse2022",
+        }
+        response = self.client.post(url, data, content_type='application/json')
+        request = json.loads(response.content)
+        access_token = 'Bearer ' + request.get('access')
+        return access_token
+
+    def test_POST_issue_of_project(self):
+        """
+        Test POST Method to add issue into project
+        """
+        self.integration_users()
+        self.integrations_projects()
+
+        access_token3 = self.login_user_3()
+        url = reverse("issues", kwargs={'id_project': 1})
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token3
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        print(self.FAIL+"POST_Issue_Without_ACCESS_AUTHOR_401 OK"+self.ENDC)
+        print(json.loads(response.content))
+
+        access_token1 = self.login_user_1()
         data = {
             "title": "Error to log",
             "description": "Echec to connect, loading",
             "priority": 'HIGH',
             'status': 'TO_DO2'
         }
-        self.client.defaults['HTTP_AUTHORIZATION'] = access_token
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
         url = reverse("issues", kwargs={'id_project': 1})
         response = self.client.post(url, data, content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_406_NOT_ACCEPTABLE)
@@ -658,21 +673,168 @@ class Test_E_IssuesProject(TestCase):
         """
         self.integration_users()
         self.integrations_projects()
-        url = reverse("login")
-        data = {
-            "email": "motdepasse2022@djangotest3.fr",
-            "password": "motdepasse2022",
-        }
-        response = self.client.post(url, data, content_type='application/json')
-        request = json.loads(response.content)
-        access_token = 'Bearer ' + request.get('access')
-
+        access_token3 = self.login_user_3()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token3
         url = reverse("issues", kwargs={'id_project': 1})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         print(self.FAIL+"GET_Issue_Without_ACCESS_401 OK"+self.ENDC)
         print(json.loads(response.content))
 
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        url = reverse("issues", kwargs={'id_project': 1})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        print(self.OKGREEN+"GET NO CONTENT ISSUE 204 OK"+self.ENDC)
+        print(response.content)
+
+        # create new issue to get after....
+        data = {
+            "title": "FREEZE APP IOS",
+            "description": "Echec to connect, loading",
+            'tag': 'BUG',
+            "priority": 'HIGH',
+            'status': 'TO_DO',
+            "assignee_user": "motdepasse2022@djangotest3.fr"
+        }
+        response = self.client.post(url, data, content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        print(self.OKGREEN+"GET ISSUE 200 OK"+self.ENDC)
+        print(json.loads(response.content))
+
+    def test_DEL_issue_of_project(self):
+        """
+        Test DEL Method to add issue into project
+        """
+        self.integration_users()
+        self.integrations_projects()
+
+        # create new issue to get after....
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        url = reverse("issues", kwargs={'id_project': 1})
+        data = {
+            "title": "FREEZE APP IOS",
+            "description": "Echec to connect, loading",
+            'tag': 'BUG',
+            "priority": 'HIGH',
+            'status': 'TO_DO',
+            "assignee_user": "motdepasse2022@djangotest3.fr"
+        }
+        response = self.client.post(url, data, content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        access_token3 = self.login_user_3()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token3
+        url = reverse("issue", kwargs={'id_project': 1, 'id_issue': 1})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        print(self.FAIL+"DEL_Issue_Without_ACCESS_401 OK"+self.ENDC)
+        print(json.loads(response.content))
+
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        print(self.OKGREEN+"DELETE ISSUE 202 SUCCESS"+self.ENDC)
+        print(json.loads(response.content))
+
+    def test_PUT_issue_of_project(self):
+        """
+        Test PUT Method to add issue into project
+        """
+        self.integration_users()
+        self.integrations_projects()
+
+        # create new issue to get after....
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        url = reverse("issues", kwargs={'id_project': 1})
+        data = {
+            "title": "FREEZE APP IOS",
+            "description": "Echec to connect, loading",
+            'tag': 'BUG',
+            "priority": 'HIGH',
+            'status': 'TO_DO',
+            "assignee_user": "motdepasse2022@djangotest3.fr"
+        }
+        response = self.client.post(url, data, content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        access_token3 = self.login_user_3()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token3
+        url = reverse("issue", kwargs={'id_project': 1, 'id_issue': 1})
+        data = {
+            "title": "FREEZE APP IOS modified",
+            "description": "Echec to connect, loading, modified",
+            'tag': 'BUG',
+            "priority": 'HIGH',
+            'status': 'TO_DO',
+        }
+        response = self.client.put(url, data, content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        print(self.FAIL+"PUT_Issue_Without_ACCESS_401 OK"+self.ENDC)
+        print(json.loads(response.content))
+
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        response = self.client.put(url, data, content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        print(self.OKGREEN+"PUT ISSUE 202 SUCCESS"+self.ENDC)
+        print(json.loads(response.content))
+
+
+class Test_F_CommentProject(TestCase):
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+    def integration_users(self):
+        user1 = User.objects.create(email="motdepasse2022@djangotest1.fr",
+                                    first_name="Django1",
+                                    last_name="Test1")
+        user1.set_password("motdepasse2022")
+        user1.save()
+        user2 = User.objects.create(email="motdepasse2022@djangotest2.fr",
+                                    first_name="Django2",
+                                    last_name="Test2")
+        user2.set_password("motdepasse2022")
+        user2.save()
+        user3 = User.objects.create(email="motdepasse2022@djangotest3.fr",
+                                    first_name="Django3",
+                                    last_name="Test3")
+        user3.set_password("motdepasse2022")
+        user3.save()
+
+    def integrations_projects(self):
+        project1 = Project.objects.create(title="Test_project Mobile API",
+                                          description="Mise en évidence d'une serie de tests pour l'application Mobile",
+                                          type="IOS")
+        project1.save()
+        author_p1 = Contributor.objects.create(user=User.objects.get(
+            email="motdepasse2022@djangotest1.fr"), project=Project.objects.filter(id=1).first(), role="AUTHOR")
+        author_p1.save()
+        project2 = Project.objects.create(title="Test_project Fonted",
+                                          description="Mise en évidence une faille identification partie Panier",
+                                          type="FRONTED")
+        project2.save()
+        author_p2 = Contributor.objects.create(user=User.objects.get(
+            email="motdepasse2022@djangotest2.fr"), project=Project.objects.filter(id=2).first(), role="AUTHOR")
+        author_p2.save()
+
+    def login_user_1(self):
+        """
+        login user_1 and return access token
+        """
         url = reverse("login")
         data = {
             "email": "motdepasse2022@djangotest1.fr",
@@ -681,26 +843,150 @@ class Test_E_IssuesProject(TestCase):
         response = self.client.post(url, data, content_type='application/json')
         request = json.loads(response.content)
         access_token = 'Bearer ' + request.get('access')
-        self.client.defaults['HTTP_AUTHORIZATION'] = access_token
+        return access_token
 
-        url = reverse("issues", kwargs={'id_project': 1})
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        print(self.OKGREEN+"GET NO CONTENT ISSUE 204 OK"+self.ENDC)
-        print(response.content)
+    def login_user_3(self):
+        """
+        login user_3 without any project and return access token
+        """
+        url = reverse("login")
+        data = {
+            "email": "motdepasse2022@djangotest3.fr",
+            "password": "motdepasse2022",
+        }
+        response = self.client.post(url, data, content_type='application/json')
+        request = json.loads(response.content)
+        access_token = 'Bearer ' + request.get('access')
+        return access_token
+
+    def create_an_issue(self):
+        self.integration_users()
+        self.integrations_projects()
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
 
         data = {
-            "title": "Error to log",
+            "title": "FREEZE APP IOS",
             "description": "Echec to connect, loading",
             'tag': 'BUG',
             "priority": 'HIGH',
-            'status': 'TO_DO'
+            'status': 'TO_DO',
+            "assignee_user": "motdepasse2022@djangotest2.fr"
         }
-        self.client.defaults['HTTP_AUTHORIZATION'] = access_token
         url = reverse("issues", kwargs={'id_project': 1})
         response = self.client.post(url, data, content_type='application/json')
-        url = reverse("issues", kwargs={'id_project': 1})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_GET_comments_of_project(self):
+        """
+        TEST GET METHOD FOR COMMENTS ISSUE PROJECT
+        """
+        self.create_an_issue()
+
+        access_token3 = self.login_user_3()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token3
+        url = reverse("comments", kwargs={'id_project': 1, 'id_issue': 1})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        print(self.FAIL+"GET_comments_Without_ACCESS_401 OK"+self.ENDC)
+        print(json.loads(response.content))
+
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        url = reverse("comments", kwargs={'id_project': 1, 'id_issue': 1})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        print(self.OKGREEN+"GET NO CONTENT COMMENT of ISSUE 204 OK"+self.ENDC)
+        print(response.content)
+
+        data = {
+            "description": "Example of comment for this issue"}
+        response = self.client.post(url, data, content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        print(self.OKGREEN+"GET ISSUE 200 OK"+self.ENDC)
+        print(self.OKGREEN+"GET COMMENTS of ISSUE 200 OK"+self.ENDC)
+        print(response.content)
+
+    def test_POST_comment_of_project(self):
+        """
+        TEST POST METHOD FOR COMMENTS ISSUE PROJECT
+        """
+        self.create_an_issue()
+
+        access_token3 = self.login_user_3()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token3
+        url = reverse("comments", kwargs={'id_project': 1, 'id_issue': 1})
+        data = {
+            "description": "Example of comment for this issue"}
+        response = self.client.post(url, data, content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        print(self.FAIL+"POST_comment_Without_ACCESS_401 OK"+self.ENDC)
         print(json.loads(response.content))
+
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        response = self.client.post(url, data, content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        print(self.OKGREEN+"POST COMMENT of ISSUE 201 CREATED OK"+self.ENDC)
+        print(response.content)
+
+    def test_PUT_comment_of_project(self):
+        """
+        TEST PUT METHOD FOR COMMENTS ISSUE PROJECT
+        """
+        self.create_an_issue()
+        # create an issue into db
+        data = {
+            "description": "Example of comment for this issue "}
+        url = reverse("comments", kwargs={'id_project': 1, 'id_issue': 1})
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        response = self.client.post(url, data, content_type="application/json")
+
+        access_token3 = self.login_user_3()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token3
+        url = reverse("comment", kwargs={
+                      'id_project': 1, 'id_issue': 1, 'id_comment': 1})
+        data = {
+            "description": "Example of comment for this issue MODIFIED "}
+        response = self.client.put(url, data, content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        print(self.FAIL+"PUT_comment_Without_ACCESS_401 OK"+self.ENDC)
+        print(json.loads(response.content))
+
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        response = self.client.put(url, data, content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        print(self.OKGREEN+"PUT COMMENT of ISSUE 202 ACCEPTED OK"+self.ENDC)
+        print(response.content)
+
+    def test_DELETE_comment_of_project(self):
+        """
+        TEST DELETE METHOD FOR COMMENTS ISSUE PROJECT
+        """
+        self.create_an_issue()
+        # create an issue into db
+        data = {
+            "description": "Example of comment for this issue "}
+        url = reverse("comments", kwargs={'id_project': 1, 'id_issue': 1})
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        response = self.client.post(url, data, content_type="application/json")
+
+        access_token3 = self.login_user_3()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token3
+        url = reverse("comment", kwargs={
+                      'id_project': 1, 'id_issue': 1, 'id_comment': 1})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        print(self.FAIL+"DELETE_comment_Without_ACCESS_401 OK"+self.ENDC)
+        print(json.loads(response.content))
+
+        access_token1 = self.login_user_1()
+        self.client.defaults['HTTP_AUTHORIZATION'] = access_token1
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        print(self.OKGREEN+"DELETE COMMENT of ISSUE 202 ACCEPTED OK"+self.ENDC)
+        print(response.content)
